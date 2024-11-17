@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>감자과자 키오스크</title>
+    <script src="script.js"></script>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* 첫 화면 스타일 */
+        .first-screen {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            text-align: center;
+            background-color: #f0f0f0;
+        }
+
+        .first-screen h1 {
+            font-size: 2rem;
+            margin-bottom: 20px;
+        }
+
+        .start-btn {
+            padding: 10px 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+
+        }
+
+        /* 기본 화면 숨기기 */
+        .main-screen {
+            display: none;
+        }
+
+/* 카운트다운 스타일 */
+        #countdown {
+            font-size: 2rem;
+            color: #FF0000;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 첫 화면 -->
+    <div id="first-screen" class="first-screen">
+        <div>
+<br><br>
+            <h1>감자과자 키오스크</h1>
+        <!-- 시간과 날짜 -->
+        <div id="date-time">
+            <p id="current-time"></p>
+            <p id="current-date"></p>
+        </div>
+<br><br><br><br><br><br><br><br>
+            <button class="start-btn" onclick="startKiosk()">시작</button>
+        </div>
+    </div>
+
+    <!-- 기본 화면 -->
+    <div id="main-screen" class="main-screen">
+        <div class="container">
+<br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
+            <h1>감자과자 키오스크</h1>
+
+            <!-- 카메라 스트림 -->
+            <div class="camera-stream">
+                
+                <video id="video" autoplay></video>
+            </div>
+        <!-- 시간과 날짜 -->
+
+            <!-- 메뉴 관리 -->
+            <div class="menu-management">
+                <h2>메뉴 관리</h2>
+        <div id="date-time">
+            <p id="current-time2"></p>
+            <p id="current-date2"></p>
+        </div>
+                <button onclick="openMenuModal()">메뉴 추가</button>
+                <!-- 카운트다운 표시 -->
+                <div id="countdown">100초</div>
+            </div>
+
+            <!-- 메뉴 -->
+            <div class="menu">
+                <h2>메뉴</h2>
+                <div id="menu-items"></div>
+            </div>
+
+            <!-- 장바구니 -->
+            <div class="cart">
+                <h3>장바구니</h3>
+                <ul id="cart-list"></ul>
+                <p id="cart-total">총 금액: 0원</p> <!-- 총 금액 표시 -->
+                <button onclick="checkout()">결제하기</button>
+            </div>
+
+            <!-- 결제 화면 -->
+            <div class="checkout" id="checkout" style="display:none;">
+                <h3>현금 결제</h3>
+                <input type="number" id="cash-in" placeholder="투입 금액">
+                <button onclick="processPayment()">결제</button>
+            </div>
+            <!-- 판매기록보기 -->
+            <div class="checkout" id="salelog" >
+                <button onclick="openSalesModal()">판매기록보기</button>
+            </div>
+
+            <!-- 전자영수증 -->
+            <div id="receipt" class="receipt" style="display:none;">
+                <h3>영수증</h3>
+                <p id="receipt-details"></p>
+            </div>
+
+            <div id="message"></div>
+        </div>
+
+        <!-- 판매 기록 보기 
+        <div id="sales-records">
+            <button onclick="viewSalesRecords()">판매 기록 보기</button>
+            <div id="sales-list" style="display:none;">
+                <h3>판매 기록</h3>
+                <ul id="sales-history"></ul>
+            </div>
+        </div> -->
+
+        <!-- 메뉴 추가 모달 -->
+        <div id="menuModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeMenuModal()">&times;</span>
+                <h3>메뉴 추가</h3>
+                <input type="text" id="menu-name" placeholder="아이템 이름">
+                <input type="number" id="menu-price" placeholder="가격" min="0">
+                <button onclick="addMenuItem()">메뉴 추가</button>
+            </div>
+        </div>
+    </div>
+<!-- 판매 기록 모달 -->
+<div id="salesModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeSalesModal()">&times;</span>
+        <h3>판매 기록</h3>
+        <ul id="sales-history"></ul>
+    </div>
+</div>
+
+
+    <script>
+        let idleTimer;  // 비활성화 타이머 변수
+        let countdownInterval;  // 카운트다운 타이머 변수
+        let timeLeft = 100;  // 카운트다운 초기값 100초
+
+        // 첫 화면에서 시작 버튼 클릭 시 호출되는 함수
+        function startKiosk() {
+            document.getElementById('first-screen').style.display = 'none'; // 첫 화면 숨기기
+            document.getElementById('main-screen').style.display = 'block';  // 기본 화면 보이기
+            startIdleTimer();  // 타이머 시작
+        }
+
+        // 타이머를 시작하는 함수
+        function startIdleTimer() {
+            resetIdleTimer();  // 타이머 초기화
+            document.body.addEventListener('click', resetIdleTimer);  // 화면 클릭 시 타이머 리셋
+		startCountdown();  // 카운트다운 시작
+        }
+
+        // 타이머를 리셋하는 함수
+function resetIdleTimer() {
+    clearTimeout(idleTimer);  // 기존의 비활성화 타이머 중지
+    clearInterval(countdownInterval);  // 이전 카운트다운 타이머 중지
+    timeLeft = 100;  // 카운트다운 초기화
+    document.getElementById('countdown').innerText = timeLeft + '초';  // UI 갱신
+    startCountdown();  // 카운트다운 다시 시작
+    idleTimer = setTimeout(returnToFirstScreen, 100000);  // 100초 후 첫 화면으로 돌아가기
+}
+
+        // 카운트다운 시작 함수
+        function startCountdown() {
+    if (countdownInterval) {
+        clearInterval(countdownInterval);  // 이전 타이머가 있을 경우 멈추기
+    }
+            countdownInterval = setInterval(function() {
+                timeLeft--;
+                document.getElementById('countdown').innerText = timeLeft + '초';
+                if (timeLeft <= 0) {
+                    clearInterval(countdownInterval);
+                }
+            }, 1000);
+        }
+        // 첫 화면으로 돌아가는 함수
+        function returnToFirstScreen() {
+            //alert("100초 동안 아무런 동작이 없어서 첫 화면으로 돌아갑니다.");
+            document.getElementById('main-screen').style.display = 'none';  // 기본 화면 숨기기
+            document.getElementById('first-screen').style.display = 'block';  // 첫 화면 보이기
+		clearcart();//카드 초기화
+        }
+
+    </script>
+</body>
+</html>
